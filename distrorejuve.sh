@@ -777,9 +777,9 @@ function apt_get_remove() {
   [  $ret -ne 0 ] && rm_overwrite_files "$tmplog" && apt-get $APT_GET_INSTALL_OPTIONS remove $@ && ret=$?
   #if [  $ret -ne 0 ] && echo "$@" | egrep -qai 'gcc-6-base:i386'; then
   #fi
-  if [  $ret -ne 0 ] && echo "$@" | egrep -qai 'gcc-6-base:i386'; then
+  if [  $ret -ne 0 ] && echo "$@" | egrep -qai 'gcc-6-base:armhf'; then
     if egrep -qai 'systemd : Depends: libcap2-bin' "$tmplog"; then
-      echo "dss:info: attempting to install libcap2-bin since gcc-6-base remove failed." && apt_get_install libcap2-bin:amd64 && apt-get $APT_GET_INSTALL_OPTIONS remove $@ && ret=$?
+      echo "dss:info: attempting to install libcap2-bin since gcc-6-base remove failed." && apt_get_install libcap2-bin:arm64 && apt-get $APT_GET_INSTALL_OPTIONS remove $@ && ret=$?
     fi
   fi
   local essentialissuepackages="$(cat $tmplog | grep --after-context 50 'WARNING: The following essential packages will be removed.' | grep '^ ' | tr '\n' ' ' | sed  -r 's/\(due to +\S*?\)//g')"
@@ -967,8 +967,8 @@ function crossgrade_debian() {
   [  ! -x /usr/bin/apt-show-versions ] && apt_get_install apt-show-versions
   [  -z "$IGNORECRUFT" ] && has_cruft_packages oldpkg && show_cruft_packages oldpkg && echo "dss:warn:There are some old packages installed.  Best to remove them before proceeding.  Do that by running bash $0 --show-cruft followed by bash $0 --remove-cruft.  Or to ignore that, run export IGNORECRUFT=Y and re-run this command. " && return 1
   
-  dpkg --add-architecture amd64
-  [ $? -ne 0 ] && echo "dss:error: Failed adding amd64 architecture." 2>&1 && return 1
+  dpkg --add-architecture arm64
+  [ $? -ne 0 ] && echo "dss:error: Failed adding arm64 architecture." 2>&1 && return 1
 
   # needed to load amd package info.  e.g. on debian.
   apt-get $APT_GET_INSTALL_OPTIONS update
@@ -978,23 +978,23 @@ function crossgrade_debian() {
 
   #if ! dpkg -l | egrep -qai '^ii.*dpkg.*amd64'; then
   if true; then
-    echo "dss:trace: cross grading.  grabbing key amd64 deb packages."
-    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install dpkg:amd64 tar:amd64 apt:amd64 apt-utils:amd64
-    [  $? -ne 0 ] && apt-get download dpkg:amd64 tar:amd64 apt:amd64 apt-utils:amd64
+    echo "dss:trace: cross grading.  grabbing key arm64 deb packages."
+    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install dpkg:arm64 tar:arm64 apt:arm64 apt-utils:arm64
+    [  $? -ne 0 ] && apt-get download dpkg:arm64 tar:arm64 apt:arm64 apt-utils:arm64
     # error if we append perl-base:amd64 to the line above...
     # and if we don't have perl-base then apt-get -f install has this error: E: Unmet dependencies
-    echo "dss:trace: cross grading.  grabbing extra amd64 deb packages."
-    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install perl-base:amd64
+    echo "dss:trace: cross grading.  grabbing extra arm64 deb packages."
+    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install perl-base:arm64
     # above will also fail due to dependency hell
-    [  $? -ne 0 ] && apt-get download perl-base:amd64
-    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install perl:amd64
-    [  $? -ne 0 ] && apt-get download perl:amd64
+    [  $? -ne 0 ] && apt-get download perl-base:arm64
+    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install perl:arm64
+    [  $? -ne 0 ] && apt-get download perl:arm64
     
-    echo "dss:trace: cross grading.  installing key amd64 deb packages: dpkg:amd64 tar:amd64 apt:amd64 perl-base:amd64"
+    echo "dss:trace: cross grading.  installing key arm64 deb packages: dpkg:arm64 tar:arm64 apt:arm64 perl-base:arm64"
     # something about this removes apache2.  figure out why...
     [  ! -d /root/distrorejuveinfo/$$ ] && mkdir /root/distrorejuveinfo/$$
     cd /root/distrorejuveinfo/$$
-    local debs="$(find /var/cache/apt/archives -name '*_amd64.deb') $(find . -maxdepth 1 -name '*_amd64.deb')"
+    local debs="$(find /var/cache/apt/archives -name '*_arm64.deb') $(find . -maxdepth 1 -name '*_arm64.deb')"
     while true; do
       #Preparing to replace libblkid1:amd64 2.20.1-5.3 (using libblkid1_2.20.1-5.3_amd64.deb) ...
       #Unpacking replacement libblkid1:amd64 ...
@@ -1005,23 +1005,23 @@ function crossgrade_debian() {
       #util-linux pre-depends on libblkid1 (>= 2.20.1)
        
     
-      local predeps="$(dpkg_install $debs 2>&1 | grep 'depends on' | sed 's/.*depends on //' | sed  -r  's/\([^)]+\)//g' | sort | uniq | awk '{print $1":amd64"}')"
+      local predeps="$(dpkg_install $debs 2>&1 | grep 'depends on' | sed 's/.*depends on //' | sed  -r  's/\([^)]+\)//g' | sort | uniq | awk '{print $1":arm64"}')"
       [ -z "$predeps" ] && break
       echo "dss:info: loading more pre-dependencies: $predeps"
       apt-get download $predeps
-      debs="$(find /var/cache/apt/archives -name '*_amd64.deb') $(find . -maxdepth 1 -name '*_amd64.deb')"
+      debs="$(find /var/cache/apt/archives -name '*_arm64.deb') $(find . -maxdepth 1 -name '*_arm64.deb')"
     done
     if [  ! -z "$debs" ]; then 
       dpkg_install $debs
       if [ $? -ne 0 ]; then 
-        [ $? -ne 0 ] && echo "dss:error: dpkg install amd64.deb files failed" 2>&1 && cd - && return 1
+        [ $? -ne 0 ] && echo "dss:error: dpkg install arm64.deb files failed" 2>&1 && cd - && return 1
       fi
       mv $debs /root/distrorejuveinfo/$$
     fi
     cd -
   fi
   #apt-get $APT_GET_INSTALL_OPTIONS autoremove
-  echo "dss:trace: cross grading.  force installing to see what amd64 packages need to be installed/fixed."
+  echo "dss:trace: cross grading.  force installing to see what arm64 packages need to be installed/fixed."
   local i=0
   for i in 0 1; do
     apt_get_f_install
@@ -1044,12 +1044,12 @@ function crossgrade_debian() {
     cd distrorejuveinfo/$$/essentialdebs
     echo "dss:trace: apt-get -f install had errors.  there may be some essential packages not installed.  trying to install 32 and 64 bit versions of: $essentialtoinstall"
     for i in $essentialtoinstall; do
-      i=$(echo $i | sed 's/:i386//')
-      i=$(echo $i | sed 's/:amd64//') 
+      i=$(echo $i | sed 's/:armhf//')
+      i=$(echo $i | sed 's/:arm64//') 
       # had been downloading 64 and 32 bit versions.  but installing both (for say perl-base) resulted in dpkg -l listing just the i386 version. 
       #apt-get download $i
       #apt-get download $i:i386
-      apt-get download $i:amd64
+      apt-get download $i:arm64
     done  
     dpkg_install $(find . -name '*.deb')
     cd -
@@ -1063,11 +1063,11 @@ function crossgrade_debian() {
   #apt-get $APT_GET_INSTALL_OPTIONS autoremove
   
   # doesn't seem to achieve much...
-  dpkg --get-selections | grep :i386 | sed -e s/:i386/:amd64/ | dpkg --set-selections
-  echo "dss:info: cross grading.  force installing of amd64 packages after dpkg --set-selections."
+  dpkg --get-selections | grep :armhf | sed -e s/:armhf/:arm64/ | dpkg --set-selections
+  echo "dss:info: cross grading.  force installing of arm64 packages after dpkg --set-selections."
   apt_get_f_install
   if [  $? -ne 0 ]; then
-    echo "dss:error: cross grading failed after initial amd64 package installs.  See crossgrade_debian for a few suggestions to resolve manually."
+    echo "dss:error: cross grading failed after initial arm64 package installs.  See crossgrade_debian for a few suggestions to resolve manually."
     return 1 
   fi
   #apt-get $APT_GET_INSTALL_OPTIONS autoremove
@@ -1075,42 +1075,42 @@ function crossgrade_debian() {
   for i in 0; do
     echo "dss:info: cross grading figuring out essential packages."
     local essentialpackages=
-    local i386apps="$(dpkg -l | grep '^ii' | grep ':i386' | awk '{print $2}' | sed 's/:i386$//' | grep -v '^lib' )"
+    local i386apps="$(dpkg -l | grep '^ii' | grep ':armhf' | awk '{print $2}' | sed 's/:armhf$//' | grep -v '^lib' )"
     local i386app=
     local essentialdeps= 
     for i386app in $i386apps; do
       local needsdeps= 
-      apt-cache show $i386app | egrep -qai 'Essential: yes|Priority: required|Priority: important' && ! dpkg -l | egrep -qai '^ii.*${i386app}.*amd64' && essentialpackages="$essentialpackages ${i386app}:amd64" && needsdeps=true
-      [ ! -z "$needsdeps" ] && essentialdeps="$essentialdeps $(for i in $(apt-cache show $i386app | grep Pre-Depends  | sed  -r  's/\([^)]+\)//g' | sed 's/,//g' | sed 's/.*://'); do echo $i:amd64; done)"
+      apt-cache show $i386app | egrep -qai 'Essential: yes|Priority: required|Priority: important' && ! dpkg -l | egrep -qai '^ii.*${i386app}.*arm64' && essentialpackages="$essentialpackages ${i386app}:arm64" && needsdeps=true
+      [ ! -z "$needsdeps" ] && essentialdeps="$essentialdeps $(for i in $(apt-cache show $i386app | grep Pre-Depends  | sed  -r  's/\([^)]+\)//g' | sed 's/,//g' | sed 's/.*://'); do echo $i:arm64; done)"
     done
     # => essentialpackages=base-files:amd64 base-passwd:amd64...
     
     [ -z "$essentialpackages" ] && break
-    local debs="$(find /var/cache/apt/archives -name '*_amd64.deb')"
+    local debs="$(find /var/cache/apt/archives -name '*_arm64.deb')"
     [  ! -d /root/distrorejuveinfo/$$ ] && mkdir /root/distrorejuveinfo/$$
     [  ! -z "$debs" ] && mv $debs /root/distrorejuveinfo/$$
     echo "dss:info: cross grading essential packages to download: $essentialpackages and essentialdependencies: $essentialdeps"
     cd /root/distrorejuveinfo/$$
     [ ! -z "$essentialpackages" ] && apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install $essentialpackages || apt-get download $essentialpackages
     [ ! -z "$essentialdeps" ] && apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install $essentialdeps || apt-get download $essentialdeps
-    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install init:amd64 
+    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install init:arm64 
     #apt-get --reinstall --download-only -y install systemd-sysv:amd64
-    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install libc-bin:amd64
+    apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install libc-bin:arm64
     echo "dss:trace: cross grading dpkg installing essential packages."
     yyyy
     #apt-get download e2fsprogs:amd64 util-linux:amd64 sed:amd64
-    local debs="$(find /var/cache/apt/archives -name '*_amd64.deb')"
-    local debs2="$(find . -name '*_amd64.deb')"
+    local debs="$(find /var/cache/apt/archives -name '*_arm64.deb')"
+    local debs2="$(find . -name '*_arm64.deb')"
     [  ! -z "$debs" ] && dpkg_install $debs $debs2
     ret=$?
     [  ! -z "$debs" ] && mv $debs /root/distrorejuveinfo/$$
-    [ $ret -ne 0 ] && echo "dss:error: dpkg install essential amd64.deb files failed" 2>&1
+    [ $ret -ne 0 ] && echo "dss:error: dpkg install essential arm64.deb files failed" 2>&1
     cd -
   done
   
   # getting a dependency issue on apt-get remove a few things: libpam-modules : PreDepends: libpam-modules-bin (= 1.1.8-3.6)
   # workaround is:
-  apt_get_install libpam-modules-bin:amd64
+  apt_get_install libpam-modules-bin:arm64
   
   
   # these seem to be uninstalled by something above.
@@ -1119,28 +1119,28 @@ function crossgrade_debian() {
   
   local i=0
   for i in 0 1; do  
-    echo "dss:trace: cross grading and bulk replacing i386 apps with 64 bit versions"
+    echo "dss:trace: cross grading and bulk replacing 32bit apps with 64 bit versions"
     # for all i386 apps, install the amd64 and remove the i386.  some will fail, that's ok.
     # do
     #apt-get $APT_GET_INSTALL_OPTIONS autoremove
      
-    local i386toremove="$(dpkg -l | grep 'i386' | grep '^ii' | awk '{print $2}' | grep -v '^lib' | sed 's/:i386//' | sed 's/$/:i386/' | tr '\n' ' ')"
+    local i386toremove="$(dpkg -l | grep 'armhf' | grep '^ii' | awk '{print $2}' | grep -v '^lib' | sed 's/:armhf//' | sed 's/$/:armhf/' | tr '\n' ' ')"
     # => e.g. apache2-utils:i386 bc:i386 bind9-host:i386...
-    local amd64toinstall="$(echo $i386toremove | sed 's/:i386/:amd64/g')"
+    local amd64toinstall="$(echo $i386toremove | sed 's/:armhf/:arm64/g')"
     # e.g. => apache2-utils:amd64 bc:amd64 bind9-host:amd64
     [  -z "$amd64toinstall" ] && [  -z "$i386toremove" ] && break
     local ret=0   
     apt_get_install $amd64toinstall && apt_get_remove $i386toremove
     [  $? -ne 0 ] && ret=$(($ret+1))    
-    echo "dss:trace: cross grading and individually installing 64 bit versions of all i386 packages."
+    echo "dss:trace: cross grading and individually installing 64 bit versions of all 32bit packages."
     local pkg=
-    local i386toremove="$(dpkg -l | grep 'i386' | grep '^ii' | awk '{print $2}' | grep -v '^lib' | sed 's/:i386//')"
+    local i386toremove="$(dpkg -l | grep 'armhf' | grep '^ii' | awk '{print $2}' | grep -v '^lib' | sed 's/:armhf//')"
     # => e.g. apache2-utils bc bind9-host
     for pkg in $i386toremove ; do 
-      apt_get_install $pkg:amd64
+      apt_get_install $pkg:arm64
       local lret=$?
       # fwiw apt-get install $alreadyinstalled returns 0
-      [  $lret -eq 0 ] && apt_get_remove $pkg:i386 
+      [  $lret -eq 0 ] && apt_get_remove $pkg:armhf 
       [  $lret -ne 0 ] && ret=$(($ret+1)) && apt_get_f_install
     done
     [  $ret -eq 0 ] && break
@@ -1151,16 +1151,16 @@ function crossgrade_debian() {
       mkdir -p distrorejuveinfo/$$/extra64debs
       cd distrorejuveinfo/$$/extra64debs
       for i in $amd64toinstall; do 
-        dpkg -l | grep '^ii' | awk '{print $2}' | grep -qai $i || echo "dss:trace: downloading amd64 debian file for $i" && apt-get download $i
+        dpkg -l | grep '^ii' | awk '{print $2}' | grep -qai $i || echo "dss:trace: downloading arm64 debian file for $i" && apt-get download $i
       done
-      local amdfilestoinstall=$(find . -type f -name '*amd64.deb')
+      local amdfilestoinstall=$(find . -type f -name '*arm64.deb')
       if [ -z "$amdfilestoinstall" ]; then
-        echo "dss:trace: not finding any extra amd64 files to install" 
+        echo "dss:trace: not finding any extra arm64 files to install" 
         break; 
       fi
       cd -
       echo "dss:trace: attempting a dpkg install of non-lib packages: $(echo $amd64toinstall)"
-      dpkg_install $(find distrorejuveinfo/$$/extra64debs -type f -name '*amd64.deb')
+      dpkg_install $(find distrorejuveinfo/$$/extra64debs -type f -name '*arm64.deb')
       local lret=$?
       echo "dss:trace: dpkg install $( [ $lret -eq 0] && echo "succeeded" || echo "failed")"
       break
@@ -1170,22 +1170,22 @@ function crossgrade_debian() {
       mkdir -p distrorejuveinfo/$$/settheory
       cd distrorejuveinfo/$$/settheory
       #[ir] e.g. to find desired = install or remove where status = installed 
-      dpkg -l | egrep '^[ir]i.*i386' | awk '{print $2}' | sed 's/:i386//' | sort > pkgs.386.log
-      dpkg -l | egrep '^ii.*amd64' | awk '{print $2}' | sed 's/:amd64//' | sort> pkgs.amd64.log
-      amd64toinstall="$(for i in $(comm -3  --check-order pkgs.amd64.log pkgs.386.log | grep -v '^[a-z]'); do echo "$i:amd64 "; done)"
+      dpkg -l | egrep '^[ir]i.*armhf' | awk '{print $2}' | sed 's/:armhf//' | sort > pkgs.386.log
+      dpkg -l | egrep '^ii.*arm64' | awk '{print $2}' | sed 's/:arm64//' | sort> pkgs.amd64.log
+      amd64toinstall="$(for i in $(comm -3  --check-order pkgs.amd64.log pkgs.386.log | grep -v '^[a-z]'); do echo "$i:arm64 "; done)"
 
       for i in $amd64toinstall; do 
-        echo "dss:trace: downloading amd64 debian file for $i"
+        echo "dss:trace: downloading arm64 debian file for $i"
         apt-get download $i
       done
       cd -
-      local amdfilestoinstall=$(find distrorejuveinfo/$$/settheory -type f -name '*amd64.deb')
+      local amdfilestoinstall=$(find distrorejuveinfo/$$/settheory -type f -name '*arm64.deb')
       if [ -z "$amdfilestoinstall" ]; then
-        echo "dss:trace: not finding any extra amd64 files to install per distrorejuveinfo/$$/settheory" 
+        echo "dss:trace: not finding any extra arm64 files to install per distrorejuveinfo/$$/settheory" 
         break; 
       fi
       echo "dss:trace: using set theory method for lib and non-lib packages: $(echo $amd64toinstall)"
-      dpkg_install $(find distrorejuveinfo/$$/settheory -type f -name '*amd64.deb')
+      dpkg_install $(find distrorejuveinfo/$$/settheory -type f -name '*arm64.deb')
       local lret=$?
       echo "dss:trace: set theory dpkg install $( [ $lret -eq 0] && echo "succeeded" || echo "failed")"
       break
@@ -1210,7 +1210,7 @@ function crossgrade_debian() {
     local fromfile="$(find /root/distrorejuveinfo/ /root/deghostinfo/ -mtime -${DAYS_UPGRADE_ONGOING} 2>/dev/null | grep crossgrade)"
     [ ! -z "$fromfile" ] && fromfile="$(ls -1rt $fromfile | head -n 1)"
     [  -z "$fromfile" ] && break
-    local uninstalled="$(print_config_state_changes "$fromfile" | grep '^dss:configdiff:statechanges:-installed:' | sed 's/.*installed://' | sed 's/:i386//' | sed 's/:amd64//' | grep -v '^ *$' | grep -v wpasupplicant | tr '\n' ' ')"
+    local uninstalled="$(print_config_state_changes "$fromfile" | grep '^dss:configdiff:statechanges:-installed:' | sed 's/.*installed://' | sed 's/:armhf//' | sed 's/:arm64//' | grep -v '^ *$' | grep -v wpasupplicant | tr '\n' ' ')"
     # => e.g. apache2 apache2-bin fontconfig-config fonts-dejavu-core php5-curl php5-gd php5-imap
     # apt-show-versions  ruby:amd64
     # ruby not available for architecture amd64
@@ -1219,7 +1219,7 @@ function crossgrade_debian() {
     # rubygems-integration: not installed
     # systemd:amd64 not installed
     
-    local available=$(apt-show-versions  $uninstalled | grep -v i386 | grep 'not installed' | sed 's/ not installed.*//' | sed 's/:.*$//')
+    local available=$(apt-show-versions  $uninstalled | grep -v armhf | grep 'not installed' | sed 's/ not installed.*//' | sed 's/:.*$//')
     # => e.g. apache2 apache2-bin fontconfig-config
     # (excludes older packages that were uninstalled.  e.g. php5 on a newer ubuntu/debian)
     local i=
@@ -1357,10 +1357,10 @@ function cruft_packages0() {
       return 0
     fi
     if [ $(getconf LONG_BIT) -eq 64 ]; then
-      dpkg -l | grep 'i386' | grep '^ii' | awk '{print $2}' > "$cruftlog"
+      dpkg -l | grep 'armhf' | grep '^ii' | awk '{print $2}' > "$cruftlog"
       if [  $(cat "$cruftlog" | head | wc -l ) -gt 0 ]; then
         has_cruft=$((has_cruft+1))
-        [  ! -z "$show" ] && echo "dss:warn: There are some i386 application packages still installed.  They can be removed by running bash $0 --remove-cruft.  They are: $(grep -v '^lib' "$cruftlog" | tr '\n' ' ') $(grep '^lib' "$cruftlog" | tr '\n' ' ')."
+        [  ! -z "$show" ] && echo "dss:warn: There are some 32bit application packages still installed.  They can be removed by running bash $0 --remove-cruft.  They are: $(grep -v '^lib' "$cruftlog" | tr '\n' ' ') $(grep '^lib' "$cruftlog" | tr '\n' ' ')."
         if [  ! -z "$remove" ]; then
   
           local loop=0
@@ -1368,39 +1368,39 @@ function cruft_packages0() {
             # dead code.  rely on --to-64bit call to crossgrade to sort this out.
             break;      
             echo "dss:trace: cross grading figuring out essential packages."
-            local essentialpackages=; for i in $(dpkg -l | grep '^ii' | grep :i386 | awk '{print $2}' | sed 's/:i386$//' | grep -v '^lib' ); do apt-cache show $i | egrep -qai 'Essential: yes|Priority: required|Priority: important' && essentialpackages="$essentialpackages $i:amd64"; done
+            local essentialpackages=; for i in $(dpkg -l | grep '^ii' | grep :armhf | awk '{print $2}' | sed 's/:armhf$//' | grep -v '^lib' ); do apt-cache show $i | egrep -qai 'Essential: yes|Priority: required|Priority: important' && essentialpackages="$essentialpackages $i:arm64"; done
             echo "dss:trace: cross grading downloading essential packages via download and dpkg_install."
             [  ! -z "$essentialpackages" ] && if apt-get --reinstall --download-only $APT_GET_INSTALL_OPTIONS install $essentialpackages; then
-              dpkg_install /var/cache/apt/archives/*_amd64.deb
+              dpkg_install /var/cache/apt/archives/*_arm64.deb
               [  ! -d /root/distrorejuveinfo/$$ ] && mkdir /root/distrorejuveinfo/$$
-              mv /var/cache/apt/archives/*amd64.deb /root/distrorejuveinfo/$$
-              dpkg -l | grep 'i386' | grep '^ii' | awk '{print $2}' > "$cruftlog"
+              mv /var/cache/apt/archives/*arm64.deb /root/distrorejuveinfo/$$
+              dpkg -l | grep 'armhf' | grep '^ii' | awk '{print $2}' > "$cruftlog"
             else
               echo "dss:trace: cross grading downloading essential packages (after download+install failed) via download and separate install" 
               apt-get $APT_GET_INSTALL_OPTIONS download $essentialpackages
-              dpkg_install *_amd64.deb
+              dpkg_install *_arm64.deb
               [  ! -d /root/distrorejuveinfo/$$ ] && mkdir /root/distrorejuveinfo/$$
-              mv /var/cache/apt/archives/*amd64.deb /root/distrorejuveinfo/$$
-              dpkg -l | grep 'i386' | grep '^ii' | awk '{print $2}' > "$cruftlog"
+              mv /var/cache/apt/archives/*arm64.deb /root/distrorejuveinfo/$$
+              dpkg -l | grep 'armhf' | grep '^ii' | awk '{print $2}' > "$cruftlog"
             fi
           done
                
           # install 64 versions of the packages if we can.
-          echo "dss:trace: bulk installing 64bit versions of installed i386 apps"
-          apt_get_install $(grep -v '^lib' "$cruftlog" | sed 's/:i386/:amd64/g' | tr '\n' ' ')
+          echo "dss:trace: bulk installing 64bit versions of installed 32bit apps"
+          apt_get_install $(grep -v '^lib' "$cruftlog" | sed 's/:armhf/:arm64/g' | tr '\n' ' ')
           echo "dss:trace: force install check"
           apt_get_f_install
-          echo "dss:trace: individually installing 64bit versions of installed i386 apps"
-          for i in $(dpkg -l | grep ':i386' | grep '^ii' | awk '{print $2}' | grep -v '^lib' | sed 's/:i386//'); do apt_get_install $i:amd64 && apt_get_remove $i:i386; done
+          echo "dss:trace: individually installing 64bit versions of installed 32bit apps"
+          for i in $(dpkg -l | grep ':armhf' | grep '^ii' | awk '{print $2}' | grep -v '^lib' | sed 's/:armhf//'); do apt_get_install $i:arm64 && apt_get_remove $i:armhf; done
           echo "dss:trace: force install check"
           apt_get_f_install
           # [  $? -ne 0 ] && commandret=$((commandret+1))
           echo "dss:trace: removing 32 bit libraries"
-          apt_get_remove $(grep -v '^lib' "$cruftlog" | sed 's/:i386//' | sed 's/$/:i386/' | tr '\n' ' ' )
-          echo "dss:trace: individually removing i386 libraries."
-          for i in $(dpkg -l | grep ':i386' | grep '^ii' | awk '{print $2}' | grep 'lib' ); do apt_get_remove $i; done
+          apt_get_remove $(grep -v '^lib' "$cruftlog" | sed 's/:armhf//' | sed 's/$/:armhf/' | tr '\n' ' ' )
+          echo "dss:trace: individually removing 32bit libraries."
+          for i in $(dpkg -l | grep ':armhf' | grep '^ii' | awk '{print $2}' | grep 'lib' ); do apt_get_remove $i; done
           #apt-get $APT_GET_INSTALL_OPTIONS autoremove
-          [  $(dpkg -l | grep ':i386' | grep '^ii' | wc -l) -gt 0 ] && commandret=$((commandret+1)) 
+          [  $(dpkg -l | grep ':armhf' | grep '^ii' | wc -l) -gt 0 ] && commandret=$((commandret+1)) 
         fi
       fi
     fi
