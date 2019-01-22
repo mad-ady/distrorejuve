@@ -922,7 +922,7 @@ function crossgrade_debian() {
   [  ! -f /etc/debian_version ] && echo "dss:info: Only debian and Ubuntu crossgrades are supported, but not $(print_distro_info)." && return 1
   
   # see https://wiki.debian.org/CrossGrading
-  ! uname -a | grep -qai x86_64 && echo "dss:error: Not running a 64 bit kernel. Cannot crossgrade." 2>&1 && return 1
+  ! uname -a | grep -qai aarch64 && echo "dss:error: Not running a 64 bit kernel. Cannot crossgrade." 2>&1 && return 1
   
   lsb_release -a 2>/dev/null | egrep -qai '\setch|lenny|squeeze|wheezy|jessie' && echo "dss:error: Older (pre stretch) Debian distros have dependency issues preventing crossgrades.  $0 --dist-upgrade prior to cross grading." && return 1 
   
