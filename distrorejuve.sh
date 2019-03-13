@@ -1850,9 +1850,15 @@ for start in $ALL_UBUNTU; do
     echo "deb http://old-releases.ubuntu.com/ubuntu/ $next-updates main restricted universe multiverse" >> /etc/apt/sources.list
     echo "deb http://old-releases.ubuntu.com/ubuntu/ $next-security main restricted universe multiverse" >> /etc/apt/sources.list    
   else
-    echo "deb http://archive.ubuntu.com/ubuntu/ $next main universe" >> /etc/apt/sources.list
-    echo "deb http://security.ubuntu.com/ubuntu/ $next-security main universe" >> /etc/apt/sources.list
-    echo "deb http://archive.ubuntu.com/ubuntu/ $next-updates main universe" >> /etc/apt/sources.list 
+#    echo "deb http://archive.ubuntu.com/ubuntu/ $next main universe" >> /etc/apt/sources.list
+#    echo "deb http://security.ubuntu.com/ubuntu/ $next-security main universe" >> /etc/apt/sources.list
+#    echo "deb http://archive.ubuntu.com/ubuntu/ $next-updates main universe" >> /etc/apt/sources.list 
+    echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next main universe restricted multiverse" >> /etc/apt/sources.list
+    echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next-security main universe restricted universe" >> /etc/apt/sources.list
+    echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next-updates main universe restricted universe" >> /etc/apt/sources.list 
+    echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next-backports main universe restricted universe" >> /etc/apt/sources.list
+    echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next-proposed main universe restricted universe" >> /etc/apt/sources.list
+     
   fi 
   # Old apache version contains 'Include /etc/apache2/httpd.conf'. Can be 'touch'ed to recreate
   [ -d /etc/apache2 ] && [ ! -f /etc/apache2/httpd.conf ] && touch /etc/apache2/httpd.conf
