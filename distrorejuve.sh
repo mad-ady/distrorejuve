@@ -1856,7 +1856,6 @@ for start in $ALL_UBUNTU; do
     echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next main universe restricted multiverse" >> /etc/apt/sources.list
     echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next-security main universe restricted universe" >> /etc/apt/sources.list
     echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next-updates main universe restricted universe" >> /etc/apt/sources.list 
-    echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next-backports main universe restricted universe" >> /etc/apt/sources.list
     echo "deb http://ports.ubuntu.com/ubuntu-ports/ $next-proposed main universe restricted universe" >> /etc/apt/sources.list
      
   fi 
